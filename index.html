@@ -105,14 +105,10 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-todo]');if
   const normalizeName=name=>String(name||'').split(' & ')[0].trim();
   const escText=s=>esc(String(s??''));
   const saveFeature=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
-  document.querySelectorAll('.nav,#mobileNav').forEach(nav=>{
-    if(nav.id==='mobileNav')nav.insertAdjacentHTML('beforeend','<button data-page="map"><span>⌖</span>地图</button><button data-page="shop"><span>🛍</span>商城</button><button data-page="messages"><span>✉</span>私信</button><button data-page="profile"><span>👤</span>主页</button>');
-    else nav.insertAdjacentHTML('beforeend','<button data-page="map"><span>⌖</span>附近地图</button><button data-page="shop"><span>🛍</span>宠物商城</button><button data-page="messages"><span>✉</span>私信</button><button data-page="profile"><span>👤</span>我的主页</button>');
-  });
   const account=document.querySelector('.account');if(account){account.dataset.profile='me';account.setAttribute('role','button');account.tabIndex=0;const b=account.querySelector('b'),sm=account.querySelector('small');if(b)b.textContent=userName();if(sm)sm.textContent='我的主页 · 点击查看'}
 
   function selfPosts(){return posts.filter(p=>p.ownerId==='me'||p.name==='小满'||p.name===userName())}
-  function getDemo(name){const n=normalizeName(name);return demos[n]||{pet:people.find(p=>normalizeName(p.name)===n)?.pet||'宠物伙伴',emoji:people.find(p=>normalizeName(p.name)===n)?.emoji||'🐾',age:'一起生活',bio:'喜欢记录毛孩子的生活点滴。',city:'上海 · 附近区域'}}
+  function getDemo(name){const n=normalizeName(name);if(demos[n])return demos[n];const person=people.find(p=>normalizeName(p.name)===n),post=posts.find(p=>normalizeName(p.name)===n);const pet=person?.pet||post?.pet||'宠物伙伴';return{pet,emoji:person?.emoji||post?.emoji||'🐾',age:pet.match(/\d+岁/)?.[0]||'一起生活',bio:person?.bio||(post?.kind==='supplies'?'喜欢和附近宠友交换闲置用品。':post?.text||'喜欢记录毛孩子的生活点滴。'),city:person?.city||post?.area||'上海 · 附近区域'}}
   function renderProfile(){
     const root=document.querySelector('#profileContent');if(!root)return;
     if(viewedProfile==='me'){
@@ -154,9 +150,9 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-todo]');if
     const visiblePosts=posts.filter(x=>community==='all'||x.kind===community);
     document.querySelectorAll('#feed .post').forEach((card,index)=>{
       const sourcePost=visiblePosts[index];if(sourcePost?.ownerId==='me')card.dataset.ownerId='me';
-      const title=card.querySelector('h3')?.textContent||'';const author=card.querySelector('.post-top b');const rawName=author?.childNodes?.[0]?.textContent?.trim()||author?.textContent||'';const n=normalizeName(rawName);const target=n==='小满'||sourcePost?.ownerId==='me'?'me':n;
+      const title=card.querySelector('h3')?.textContent||'';const author=card.querySelector('.post-top b');const rawName=author?.childNodes?.[0]?.textContent?.trim()||author?.textContent||'';const n=normalizeName(rawName);const sourceName=normalizeName(sourcePost?.name||rawName);const target=sourcePost?.ownerId==='me'||sourcePost?.name==='小满'?'me':sourceName;
       const face=card.querySelector('.post-top .face');if(face){face.dataset.profile=target;face.setAttribute('role','button');face.tabIndex=0}
-      if(author){const authorName=n;const pet=author.querySelector('span')?.outerHTML||'';author.innerHTML=`<button class="profile-link" data-profile="${escText(target)}">${escText(authorName==='小满'?userName():authorName)}</button> ${pet}`}
+      if(author){const authorName=target==='me'?userName():sourceName;const pet=author.querySelector('span')?.outerHTML||'';author.innerHTML=`<button class="profile-link" data-profile="${escText(target)}">${escText(authorName)}</button> ${pet}`}
       const commentBtn=[...card.querySelectorAll('[data-action="comment"]')][0];if(commentBtn){commentBtn.dataset.postTitle=title;const n=(comments[title]||[]).length;commentBtn.textContent=`◌ 留言${n?` (${n})`:''}`}
     });
     document.querySelectorAll('#nearbyGrid .story').forEach(card=>{const b=card.querySelector('.story-info b');if(!b)return;const full=b.textContent,n=normalizeName(full);b.innerHTML=`<button class="profile-link" data-profile="${escText(n)}">${escText(full)}</button>`});
