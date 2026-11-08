@@ -357,5 +357,312 @@ growthStoryForm.onsubmit = async function (event) {
 };
 </script>
 
+<script id="family-multipet-v1">
+(() => {
+  const familyKey = 'maomao-family-household-v1';
+  const memberKey = 'maomao-active-member-v1';
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const clone = value => JSON.parse(JSON.stringify(value));
+  const readJson = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
+  const savedProfile = readJson('maomao-user-profile-v2', {name:'小满',bio:'把平凡日子过成和毛孩子一起的小小冒险。',city:'上海 · 徐汇区',isPublic:false});
+  const today = new Date().toISOString().slice(0, 10);
+  const daysFromNow = count => { const value = new Date(); value.setDate(value.getDate() + count); return value.toISOString().slice(0, 10); };
+  const seedDog = {
+    id:'pet-tail',name:petProfile.name || '小尾巴',species:petProfile.species || '柯基犬',emoji:'🐕',sex:'男生',birthday:'2023-04-18',
+    records:clone(Array.isArray(records) ? records : []),stories:clone(Array.isArray(stories) ? stories : [])
+  };
+  const seedOwnerName = savedProfile.name || '小满';
+  const otherOwnerName = seedOwnerName === '阿梨' ? '小满' : '阿梨';
+  let household = readJson(familyKey, null);
+  if (!household || !Array.isArray(household.pets)) {
+    household = {
+      id:'family-demo',
+      activeMemberId:'owner-1',
+      currentPetId:'pet-tail',
+      members:[
+        {id:'owner-1',name:seedOwnerName,role:'家庭管理员',avatar:'👩🏻',profile:clone(savedProfile)},
+        {id:'member-2',name:otherOwnerName,role:'家人',avatar:'👩🏼',profile:{name:otherOwnerName,bio:'和家人一起照顾毛孩子，记录每个小进步。',city:'上海 · 徐汇区',isPublic:false}}
+      ],
+      pets:[
+        seedDog,
+        {id:'pet-mimi',name:'咪咪',species:'猫',emoji:'🐈',sex:'女生',birthday:'2024-06-12',
+          records:[
+            {type:'weight',title:'体重记录',detail:'每月称重，观察成长变化。',value:'3.8 kg',date:'2026-11-06',icon:'⚖️'},
+            {type:'vaccine',title:'猫三联疫苗',detail:'已记录接种信息。',value:'已接种',date:'2026-09-12',icon:'💉'},
+            {type:'deworm',title:'体内驱虫',detail:'已完成本次护理。',value:'已完成',date:'2026-10-20',icon:'🛡️'}
+          ],
+          stories:[
+            {id:'mimi-story-1',title:'咪咪的新纸箱',text:'刚拆开的纸箱立刻变成了咪咪最喜欢的新窝。',date:'2026-11-04',emoji:'🐈',public:true},
+            {id:'mimi-story-2',title:'第一次称体重',text:'咪咪现在 3.8 kg，记下这次健康数据。',date:'2026-11-06',emoji:'⚖️',public:false}
+          ]
+        }
+      ],
+      tasks:(Array.isArray(todoList)?clone(todoList):[]).map(task=>({...task,petId:'pet-tail',createdById:'owner-1',createdByName:seedOwnerName})),
+      lostPets:[]
+    };
+  }
+  household.members = Array.isArray(household.members) ? household.members : [];
+  household.pets = Array.isArray(household.pets) ? household.pets : [];
+  household.tasks = Array.isArray(household.tasks) ? household.tasks : [];
+  household.lostPets = Array.isArray(household.lostPets) ? household.lostPets : [];
+  if (!household.members.some(member => member.id === 'owner-1')) household.members.unshift({id:'owner-1',name:seedOwnerName,role:'家庭管理员',avatar:'👩🏻',profile:clone(savedProfile)});
+  if (!household.members.some(member => member.id === 'member-2')) household.members.push({id:'member-2',name:otherOwnerName,role:'家人',avatar:'👩🏼',profile:{name:otherOwnerName,bio:'和家人一起照顾毛孩子，记录每个小进步。',city:'上海 · 徐汇区',isPublic:false}});
+  if (!household.pets.some(pet => pet.id === 'pet-tail')) household.pets.unshift(seedDog);
+  if (!household.pets.some(pet => pet.id === 'pet-mimi')) household.pets.push({
+    id:'pet-mimi',name:'咪咪',species:'猫',emoji:'🐈',sex:'女生',birthday:'2024-06-12',
+    records:[{type:'weight',title:'体重记录',detail:'每月称重，观察成长变化。',value:'3.8 kg',date:'2026-11-06',icon:'⚖️'},{type:'vaccine',title:'猫三联疫苗',detail:'已记录接种信息。',value:'已接种',date:'2026-09-12',icon:'💉'}],
+    stories:[{id:'mimi-story-1',title:'咪咪的新纸箱',text:'刚拆开的纸箱立刻变成了咪咪最喜欢的新窝。',date:'2026-11-04',emoji:'🐈',public:true}]
+  });
+  household.pets.forEach(pet => { pet.records = Array.isArray(pet.records) ? pet.records : []; pet.stories = Array.isArray(pet.stories) ? pet.stories : []; });
+  household.currentPetId = localStorage.getItem('maomao-active-pet-id') || household.currentPetId || 'pet-tail';
+  if (!household.pets.some(pet => pet.id === household.currentPetId)) household.currentPetId = household.pets[0].id;
+  let activeMemberId = localStorage.getItem(memberKey) || household.activeMemberId || household.members[0].id;
+  if (!household.members.some(member => member.id === activeMemberId)) activeMemberId = household.members[0].id;
+  household.activeMemberId = activeMemberId;
+  let activePet = household.pets.find(pet => pet.id === household.currentPetId);
+  let selectedLostId = null;
+
+  if (!household.tasks.some(task => task.petId === 'pet-mimi')) {
+    household.tasks.push(
+      {id:Date.now()+1,title:'猫三联疫苗',kind:'vaccine',date:daysFromNow(9),icon:'💉',done:false,petId:'pet-mimi',createdById:activeMemberId,createdByName:seedOwnerName},
+      {id:Date.now()+2,title:'梳毛护理',kind:'groom',date:daysFromNow(1),icon:'🪮',done:false,petId:'pet-mimi',createdById:activeMemberId,createdByName:seedOwnerName}
+    );
+  }
+  household.tasks = household.tasks.map((task,index) => ({...task,id:task.id ?? Date.now()+index,petId:task.petId || 'pet-tail',createdById:task.createdById || activeMemberId,createdByName:task.createdByName || seedOwnerName}));
+  if (!household.lostPets.some(item => item.id === 'lost-demo-orange')) household.lostPets.push({
+    id:'lost-demo-orange',petName:'橘子',species:'橘猫',emoji:'🐈',ownerName:'木木',ownerId:'community-mumu',
+    area:'徐汇区 · 滨江西岸示意段',lastSeen:'今天 09:20',description:'橘白短毛，戴绿色项圈，比较亲人。请先通过站内私信联系主人。',pos:[63,40],status:'searching'
+  });
+  localStorage.setItem(familyKey, JSON.stringify(household));
+  localStorage.setItem(memberKey, activeMemberId);
+  localStorage.setItem('maomao-active-pet-id', household.currentPetId);
+
+  function memberNow(){ return household.members.find(member => member.id === activeMemberId) || household.members[0]; }
+  function petEmoji(pet){ return pet.emoji || (pet.species === '猫' ? '🐈' : pet.species === '狗' ? '🐕' : '🐾'); }
+  function saveHousehold(){ household.activeMemberId=activeMemberId; household.currentPetId=activePet.id; localStorage.setItem(familyKey,JSON.stringify(household)); }
+  function syncMemberProfile(){
+    const current=memberNow(), profile=readJson('maomao-user-profile-v2',current.profile || {name:current.name});
+    current.profile={...(current.profile||{}),...profile}; current.name=current.profile.name || current.name;
+  }
+  function syncCurrentPet(){
+    if(!activePet)return;
+    activePet.name=petProfile.name || activePet.name;
+    activePet.species=petProfile.species || activePet.species;
+    activePet.emoji=petEmoji(activePet);
+    activePet.records=clone(Array.isArray(records)?records:[]);
+    activePet.stories=clone(Array.isArray(stories)?stories:[]);
+    const currentMember=memberNow();
+    household.tasks=household.tasks.filter(task=>task.petId!==activePet.id).concat((Array.isArray(todoList)?todoList:[]).map(task=>({
+      ...task,petId:activePet.id,createdById:task.createdById||activeMemberId,createdByName:task.createdByName||currentMember.name
+    })));
+    syncMemberProfile();
+    saveHousehold();
+    localStorage.setItem('maomao-profile',JSON.stringify({name:activePet.name,species:activePet.species}));
+    localStorage.setItem('maomao-records',JSON.stringify(activePet.records));
+    localStorage.setItem('maomao-stories',JSON.stringify(activePet.stories));
+    localStorage.setItem('maomao-todos',JSON.stringify(todoList));
+  }
+  function loadPet(petId){
+    syncCurrentPet();
+    activePet=household.pets.find(pet=>pet.id===petId) || household.pets[0];
+    household.currentPetId=activePet.id;
+    petProfile={name:activePet.name,species:activePet.species};
+    records=clone(activePet.records || []);
+    stories=clone(activePet.stories || []);
+    todoList=household.tasks.filter(task=>task.petId===activePet.id).map(task=>clone(task));
+    localStorage.setItem('maomao-active-pet-id',activePet.id);
+    localStorage.setItem('maomao-profile',JSON.stringify(petProfile));
+    localStorage.setItem('maomao-records',JSON.stringify(records));
+    localStorage.setItem('maomao-stories',JSON.stringify(stories));
+    localStorage.setItem('maomao-todos',JSON.stringify(todoList));
+    saveHousehold();
+    renderMore();
+    if(document.querySelector('#map.active'))setTimeout(renderLostMap,0);
+  }
+  function renderPetSwitcher(){
+    let bar=document.querySelector('#petSwitcher');
+    if(!bar){bar=document.createElement('div');bar.id='petSwitcher';bar.className='pet-switcher';document.querySelector('.top')?.insertAdjacentElement('afterend',bar);}
+    const current=memberNow();
+    bar.innerHTML='<div class="pet-switcher-left"><span class="pet-switcher-label">当前宠物</span><div class="pet-switcher-pets">'+household.pets.map(pet=>'<button class="pet-chip '+(pet.id===activePet.id?'selected':'')+'" data-pet-switch="'+escapeHtml(pet.id)+'"><span>'+escapeHtml(petEmoji(pet))+'</span>'+escapeHtml(pet.name)+'</button>').join('')+'<button class="pet-chip add-pet" data-action="family-new-pet">＋ 添加宠物</button></div></div><button class="family-account-chip" data-action="family-accounts"><span class="family-avatar">'+escapeHtml(current.avatar||'👤')+'</span><span><b>'+escapeHtml(current.name)+'</b><small>家庭账户 · 切换</small></span><span class="family-chevron">⌄</span></button>';
+  }
+  function labelSharedTodos(){
+    document.querySelectorAll('#todoGrid [data-todo]').forEach(button=>{
+      const task=todoList.find(item=>String(item.id)===button.dataset.todo),small=button.closest('.due')?.querySelector('small');
+      if(task&&small){const owner=task.createdByName||memberNow().name;small.textContent=small.textContent.split(' · 家庭共享')[0]+' · 家庭共享 · '+owner;}
+    });
+  }
+  function updatePetCopy(){
+    const name=activePet.name,home=document.querySelector('#home');
+    const hero=home?.querySelector('.hero h1'); if(hero)hero.innerHTML='早上好，'+escapeHtml(memberNow().name)+' ☀️<br>和'+escapeHtml(name)+'一起，收藏每一天';
+    const homeSub=home?.querySelector('.row-head p');if(homeSub)homeSub.textContent='今天看看'+name+'的状态';
+    const portrait=home?.querySelector('.pet-card .pet-portrait');if(portrait)portrait.textContent=petEmoji(activePet);
+    const nameNode=home?.querySelector('.pet-name');if(nameNode)nameNode.innerHTML=escapeHtml(name)+' <span style="font-size:15px;color:#e4a76e">✦</span><button class="pet-edit" data-action="edit-pet">编辑</button>';
+    const meta=home?.querySelector('.pet-meta');if(meta)meta.textContent=activePet.species+' · '+(activePet.sex||'家庭成员')+' · '+(activePet.birthday||'生日待补充')+' 出生';
+    const ageTag=home?.querySelector('.pet-card .tag.orange');if(ageTag)ageTag.textContent=activePet.species==='猫'?'猫咪 · 家庭成员':'陪伴中';
+    const chart=document.querySelector('#health .big-chart .card-title');if(chart&&chart.firstChild)chart.firstChild.textContent=name+'的体重曲线 ';
+    const growth=document.querySelector('#growth .card h2');if(growth)growth.textContent=name+'与'+memberNow().name+'的成长日记';
+    const profilePet=document.querySelector('#profileContent .pet-profile-card .pet-portrait');if(profilePet)profilePet.textContent=petEmoji(activePet);
+  }
+  function renderHealthReminders(){
+    const health=document.querySelector('#health'),tabs=health?.querySelector('.tabbar');if(!health||!tabs)return;
+    let panel=document.querySelector('#sharedHealthReminders');
+    if(!panel){panel=document.createElement('div');panel.id='sharedHealthReminders';panel.className='card health-reminder-panel';tabs.insertAdjacentElement('beforebegin',panel);}
+    const reminders=todoList.filter(task=>!task.done&&['vaccine','deworm','weight','medicine'].includes(task.kind)).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    panel.innerHTML='<div class="health-reminder-head"><div><b>'+escapeHtml(activePet.name)+'的近期健康提醒</b><small>与首页待办共用同一条家庭记录</small></div><button class="outline" data-action="family-add-health-reminder">＋ 添加提醒</button></div>'+
+      (reminders.length?'<div class="health-reminder-list">'+reminders.slice(0,5).map(task=>'<div class="health-reminder-row"><span class="reminder-icon">'+escapeHtml(task.icon||'♡')+'</span><div><b>'+escapeHtml(task.title)+'</b><small>'+escapeHtml(task.date===today? '今天':(typeof date==='function'?date(task.date):task.date))+' · '+escapeHtml(task.createdByName||'家庭共享待办')+'</small></div><button class="todo-check" data-todo="'+escapeHtml(task.id)+'">完成</button></div>').join('')+'</div>':'<div class="health-reminder-empty">暂无健康提醒。添加后也会出现在首页待办中。</div>');
+  }
+  function renderMoreFamily(){
+    renderMore();
+  }
+  const baseRenderMore=renderMore;
+  renderMore=function(){
+    baseRenderMore();
+    syncCurrentPet();
+    renderPetSwitcher();
+    labelSharedTodos();
+    updatePetCopy();
+    renderHealthReminders();
+    if(document.querySelector('#map.active'))renderLostMap();
+  };
+  render=renderMore;
+
+  const basePage=page;
+  page=function(id){
+    basePage(id);
+    if(id==='health')renderHealthReminders();
+    if(id==='map')setTimeout(renderLostMap,0);
+    renderPetSwitcher();
+  };
+
+  function openPanel(type,title,html,showSubmit){
+    modalType=type;
+    document.querySelector('#modalTitle').textContent=title;
+    document.querySelector('#formFields').innerHTML=html;
+    const submit=document.querySelector('#form [type="submit"]');
+    if(submit)submit.style.display=showSubmit?'':'none';
+    document.querySelector('#modalBack').classList.add('show');
+  }
+  function familyAccountsHtml(){
+    syncCurrentPet();
+    openPanel('family-accounts','家庭成员与账户','<p class="family-modal-intro">每位家人使用独立账户；家庭宠物档案和待办由成员共同查看。</p><div class="family-members-list">'+household.members.map(member=>'<div class="family-member-card"><span class="family-avatar large">'+escapeHtml(member.avatar||'👤')+'</span><div class="family-member-info"><b>'+escapeHtml(member.name)+(member.id===activeMemberId?' · 当前账户':'')+'</b><small>'+escapeHtml(member.role||'家庭成员')+' · 独立主页</small></div><button class="text-btn" data-family-profile="'+escapeHtml(member.id)+'">家庭主页</button>'+(member.id===activeMemberId?'':'<button class="outline" data-family-switch="'+escapeHtml(member.id)+'">切换</button>')+'</div>').join('')+'</div><div class="family-shared-card"><b>共享的家庭空间</b><p>'+household.pets.map(pet=>escapeHtml(petEmoji(pet))+' '+escapeHtml(pet.name)).join('　')+'</p><small>家庭待办共 '+household.tasks.filter(task=>!task.done).length+' 项未完成，所有成员打开同一家庭空间都能看到。</small></div><button class="outline family-invite-button" data-action="family-add-member">＋ 添加家庭成员账户</button><small class="family-demo-note">交互原型：账户和共享数据保存在当前浏览器；跨设备同步及真实身份验证需要服务端支持。</small>',false);
+  }
+  function familyProfileView(memberId){
+    syncCurrentPet();
+    const member=household.members.find(item=>item.id===memberId);if(!member)return;
+    const profile=member.id===activeMemberId?readJson('maomao-user-profile-v2',member.profile||{}):(member.profile||{});
+    const memberPosts=posts.filter(post=>post.ownerId===member.id||post.name===member.name).slice(0,3);
+    openPanel('family-member-view',member.name+'的家庭主页','<div class="family-profile-view"><div class="family-profile-top"><span class="family-avatar large">'+escapeHtml(member.avatar||'👤')+'</span><div><b>'+escapeHtml(member.name)+'</b><small>'+escapeHtml(member.role||'家庭成员')+' · '+escapeHtml(profile.city||'家庭成员')+'</small></div></div><p>'+escapeHtml(profile.bio||'这位家人还没有填写个人介绍。')+'</p><div class="family-view-section"><b>共同照护的宠物</b><div>'+household.pets.map(pet=>'<span class="tag">'+escapeHtml(petEmoji(pet))+' '+escapeHtml(pet.name)+'</span>').join('')+'</div></div><div class="family-view-section"><b>最近分享</b>'+(memberPosts.length?memberPosts.map(post=>'<article><small>'+escapeHtml(post.date||'最近')+' · '+escapeHtml(post.pet||'家庭宠物')+'</small><strong>'+escapeHtml(post.title)+'</strong><p>'+escapeHtml(post.text)+'</p></article>').join(''):'<small>暂时没有家庭分享动态。</small>')+'</div></div><button class="outline" data-action="family-back-to-accounts">返回家庭成员</button>',false);
+  }
+  const baseOpenModal=openModal;
+  openModal=function(type){
+    if(type==='family-accounts'){familyAccountsHtml();return;}
+    if(type==='family-new-pet'){
+      openPanel('family-new-pet','添加家庭宠物','<label class="field">宠物名字<input name="newPetName" required maxlength="20" placeholder="例如：咪咪"></label><label class="field">宠物种类<input name="newPetSpecies" required maxlength="24" list="familyPetKinds" placeholder="可自定义种类"><datalist id="familyPetKinds"><option>猫</option><option>狗</option><option>兔子</option><option>仓鼠</option><option>鸟</option><option>乌龟</option></datalist></label><label class="field">生日（选填）<input name="newPetBirthday" type="date"></label><small class="family-demo-note">新宠物会加入家庭共享档案，可以从顶部标签切换。</small>',true);return;
+    }
+    if(type==='family-add-member'){
+      openPanel('family-add-member','添加家庭成员账户','<label class="field">家庭成员昵称<input name="familyMemberName" required maxlength="20" placeholder="例如：林阿姨"></label><label class="field">家庭角色<input name="familyMemberRole" maxlength="20" value="家人"></label><label class="field">个人介绍<input name="familyMemberBio" maxlength="100" placeholder="简单介绍一下自己"></label><small class="family-demo-note">将创建一个独立的演示账户，并加入当前家庭。</small>',true);return;
+    }
+    if(type==='family-lost-pet'){
+      openPanel('family-lost-pet','发布走失宠物信息','<label class="field">走失宠物<select name="lostPetId">'+household.pets.map(pet=>'<option value="'+escapeHtml(pet.id)+'" '+(pet.id===activePet.id?'selected':'')+'>'+escapeHtml(pet.name)+' · '+escapeHtml(pet.species)+'</option>').join('')+'</select></label><label class="field">走失地点<input name="lostArea" required maxlength="60" value="上海 · 徐汇区附近" placeholder="选择或描述附近地标"></label><label class="field">最后出现时间<input name="lostTime" required maxlength="32" value="今天"></label><label class="field">外观和联系方式<textarea name="lostDescription" required maxlength="220" placeholder="颜色、特征、项圈，以及希望邻居如何联系你"></textarea></label><small class="family-demo-note">地点会显示在附近地图。发布前请确认只填写愿意公开的区域和联系信息。</small>',true);return;
+    }
+    const result=baseOpenModal(type);
+    if(type==='new-todo'){
+      const fields=document.querySelector('#formFields');
+      if(fields&&!fields.querySelector('.family-shared-note'))fields.insertAdjacentHTML('beforeend','<small class="family-shared-note">当前宠物：'+escapeHtml(activePet.name)+' · 保存后会同步到家庭成员的首页待办。</small>');
+    }
+    return result;
+  };
+
+  const form=document.querySelector('#form');
+  form?.addEventListener('submit',event=>{
+    if(!['family-new-pet','family-add-member','family-lost-pet'].includes(modalType))return;
+    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+    const data=new FormData(form);
+    if(modalType==='family-new-pet'){
+      const name=String(data.get('newPetName')||'').trim(),species=String(data.get('newPetSpecies')||'').trim();
+      if(!name||!species)return;
+      const pet={id:'pet-'+Date.now(),name,species,emoji:species.includes('猫')?'🐈':species.includes('狗')?'🐕':'🐾',sex:'家庭成员',birthday:String(data.get('newPetBirthday')||''),records:[],stories:[]};
+      household.pets.push(pet);household.currentPetId=pet.id;activePet=pet;records=[];stories=[];todoList=[];petProfile={name:pet.name,species:pet.species};
+      saveHousehold();document.querySelector('#modalBack').classList.remove('show');form.reset();renderMore();showToast('已添加'+name+'，现在可以记录成长啦 ✨');return;
+    }
+    if(modalType==='family-add-member'){
+      const name=String(data.get('familyMemberName')||'').trim();if(!name)return;
+      const member={id:'member-'+Date.now(),name,role:String(data.get('familyMemberRole')||'家人').trim(),avatar:'👤',profile:{name,bio:String(data.get('familyMemberBio')||'').trim(),city:'上海 · 徐汇区',isPublic:false}};
+      household.members.push(member);saveHousehold();form.reset();familyAccountsHtml();showToast('家庭成员账户已加入');return;
+    }
+    const selected=household.pets.find(pet=>pet.id===String(data.get('lostPetId')));
+    if(!selected)return;
+    const member=memberNow(),stamp=Date.now();
+    household.lostPets.unshift({id:'lost-'+stamp,petName:selected.name,species:selected.species,emoji:petEmoji(selected),ownerName:member.name,ownerId:member.id,area:String(data.get('lostArea')||'附近区域').trim(),lastSeen:String(data.get('lostTime')||'今天').trim(),description:String(data.get('lostDescription')||'').trim(),pos:[25+(stamp%53),25+((stamp>>3)%44)],status:'searching'});
+    selectedLostId=household.lostPets[0].id;saveHousehold();document.querySelector('#modalBack').classList.remove('show');form.reset();page('map');setTimeout(renderLostMap,0);showToast('走失信息已标记在附近地图上');
+  },true);
+
+  function renderLostDetail(item){
+    const detail=document.querySelector('#mapDetail');if(!detail||!item)return;
+    selectedLostId=item.id;
+    const profileTarget=item.ownerId===activeMemberId?'me':item.ownerName;
+    detail.innerHTML='<div class="lost-detail-icon">'+escapeHtml(item.emoji||'🐾')+'</div><span class="place-tag lost-tag">附近寻宠 · '+(item.status==='searching'?'正在寻找':'已找到')+'</span><h2>'+escapeHtml(item.petName)+'走失了</h2><p class="place-address">⌖ '+escapeHtml(item.area)+'</p><p class="place-hours">◷ 最后出现：'+escapeHtml(item.lastSeen)+'</p><p class="place-description">'+escapeHtml(item.description)+'</p><div class="lost-owner-card"><span class="family-avatar">'+escapeHtml(household.members.find(member=>member.id===item.ownerId)?.avatar||'👤')+'</span><div><small>发布人</small><b>'+escapeHtml(item.ownerName)+'</b></div></div><div class="place-actions"><button class="outline" data-profile="'+escapeHtml(profileTarget)+'">查看主人主页</button><button class="primary" data-action="message-user" data-name="'+escapeHtml(item.ownerName)+'">联系主人</button></div><small class="muted-note">此走失位置为附近示意点；请通过主页或站内私信核实信息。</small>';
+  }
+  function renderLostMap(){
+    const map=document.querySelector('#demoMap');if(!map)return;
+    const toolbar=document.querySelector('#mapFilters');
+    const filter=toolbar?.querySelector('button.on')?.dataset.mapFilter||'all';
+    map.querySelectorAll('[data-lost-pet-pin]').forEach(pin=>pin.remove());
+    if(filter==='all'||filter==='lost'){
+      household.lostPets.filter(item=>item.status==='searching').forEach(item=>{
+        const pin=document.createElement('button');pin.type='button';pin.className='map-pin lost '+(selectedLostId===item.id?'selected':'');
+        pin.dataset.lostPetPin=item.id;pin.setAttribute('aria-label',item.petName+'走失求助');pin.style.left=item.pos[0]+'%';pin.style.top=item.pos[1]+'%';pin.textContent='🚨';map.appendChild(pin);
+      });
+    }
+    if(filter==='lost'){
+      const current=household.lostPets.find(item=>item.id===selectedLostId&&item.status==='searching')||household.lostPets.find(item=>item.status==='searching');
+      if(current)renderLostDetail(current);
+      else {const detail=document.querySelector('#mapDetail');if(detail)detail.innerHTML='<div class="empty">附近暂时没有走失求助信息。</div>';}
+    }
+  }
+  const mapFilters=document.querySelector('#mapFilters');
+  if(mapFilters&&!mapFilters.querySelector('[data-map-filter="lost"]')){
+    mapFilters.insertAdjacentHTML('beforeend','<button data-map-filter="lost">走失求助</button><button class="publish-lost-button" data-action="family-publish-lost">＋ 发布走失信息</button>');
+    mapFilters.addEventListener('click',event=>{if(event.target.closest('[data-map-filter]'))setTimeout(renderLostMap,0);},true);
+  }
+  document.addEventListener('click',event=>{
+    const petButton=event.target.closest('[data-pet-switch]');
+    if(petButton){event.preventDefault();event.stopImmediatePropagation();if(petButton.dataset.petSwitch!==activePet.id)loadPet(petButton.dataset.petSwitch);return;}
+    const lostPin=event.target.closest('[data-lost-pet-pin]');
+    if(lostPin){event.preventDefault();event.stopImmediatePropagation();const item=household.lostPets.find(value=>value.id===lostPin.dataset.lostPetPin);renderLostDetail(item);renderLostMap();return;}
+    const memberProfile=event.target.closest('[data-family-profile]');
+    if(memberProfile){event.preventDefault();event.stopImmediatePropagation();familyProfileView(memberProfile.dataset.familyProfile);return;}
+    const memberSwitch=event.target.closest('[data-family-switch]');
+    if(memberSwitch){event.preventDefault();event.stopImmediatePropagation();syncCurrentPet();const current=memberNow();const currentProfile=readJson('maomao-user-profile-v2',current.profile||{});current.profile={...(current.profile||{}),...currentProfile};current.name=current.profile.name||current.name;const target=household.members.find(item=>item.id===memberSwitch.dataset.familySwitch);if(!target)return;activeMemberId=target.id;household.activeMemberId=target.id;localStorage.setItem('maomao-user-profile-v2',JSON.stringify(target.profile||{name:target.name,bio:'',city:'上海 · 徐汇区',isPublic:false}));localStorage.setItem(memberKey,target.id);saveHousehold();location.reload();return;}
+    const action=event.target.closest('[data-action]')?.dataset.action;
+    if(action==='family-accounts'){event.preventDefault();event.stopImmediatePropagation();familyAccountsHtml();return;}
+    if(action==='family-new-pet'){event.preventDefault();event.stopImmediatePropagation();openModal('family-new-pet');return;}
+    if(action==='family-add-member'){event.preventDefault();event.stopImmediatePropagation();openModal('family-add-member');return;}
+    if(action==='family-back-to-accounts'){event.preventDefault();event.stopImmediatePropagation();familyAccountsHtml();return;}
+    if(action==='family-add-health-reminder'){event.preventDefault();event.stopImmediatePropagation();openModal('new-todo');return;}
+    if(action==='family-publish-lost'){event.preventDefault();event.stopImmediatePropagation();openModal('family-lost-pet');return;}
+  },true);
+
+  const style=document.createElement('style');
+  style.textContent=`
+    .pet-switcher{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:-10px 0 22px;padding:12px 15px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 8px 25px rgba(55,75,56,.035)}
+    .pet-switcher-left,.pet-switcher-pets{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pet-switcher-label{font-size:11px;color:#9aa49b;font-weight:700;margin-right:3px}
+    .pet-chip{border:1px solid #e8eee5;background:#fbfcfa;color:#667368;border-radius:99px;padding:7px 12px;font-size:12px;font-weight:700}.pet-chip span{margin-right:5px}.pet-chip.selected{background:#eaf4e8;color:var(--green);border-color:#d8ead6}.pet-chip.add-pet{border-style:dashed;color:#719174}
+    .family-account-chip{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 6px;border:1px solid #e7ece4;border-radius:99px;background:#fff;color:#3d5f45;text-align:left;white-space:nowrap}.family-account-chip b{display:block;font-size:11px}.family-account-chip small{display:block;color:#9ba59b;font-size:9px;margin-top:2px}.family-avatar{width:30px;height:30px;border-radius:50%;background:#f1eee6;display:grid;place-items:center;font-size:17px}.family-avatar.large{width:43px;height:43px;font-size:22px;flex:0 0 43px}.family-chevron{font-size:14px;color:#9ca69c;margin-left:3px}
+    .health-reminder-panel{padding:17px 20px;margin:0 0 17px}.health-reminder-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.health-reminder-head b{display:block;font-size:13px}.health-reminder-head small,.health-reminder-row small{display:block;color:#9aa49b;font-size:10px;margin-top:4px}.health-reminder-head .outline{padding:8px 11px;font-size:11px}.health-reminder-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:13px}.health-reminder-row{display:flex;align-items:center;gap:9px;padding:10px;background:#f8faf6;border-radius:11px}.health-reminder-row>div{min-width:0;flex:1}.health-reminder-row b{font-size:11px}.reminder-icon{font-size:17px}.health-reminder-empty{padding:12px 0 1px;color:#9aa49b;font-size:11px}.family-shared-note{padding:10px;border-radius:9px;background:#f0f6ed;color:#5e815f;font-size:11px;line-height:1.6}
+    .family-modal-intro{font-size:12px;color:#7d897e;line-height:1.7;margin:12px 0}.family-members-list{display:grid;gap:8px}.family-member-card{display:flex;align-items:center;gap:9px;padding:10px;background:#f8faf6;border-radius:12px}.family-member-info{min-width:75px;flex:1}.family-member-info b{font-size:11px}.family-member-info small{display:block;color:#96a096;font-size:9px;margin-top:4px}.family-member-card .text-btn{font-size:10px;white-space:nowrap}.family-member-card .outline{padding:7px 9px;font-size:10px}.family-shared-card{margin:13px 0;padding:13px;border-radius:12px;background:#eff6eb}.family-shared-card b{font-size:12px}.family-shared-card p{font-size:14px;margin:8px 0}.family-shared-card small,.family-demo-note{display:block;color:#849184;font-size:9px;line-height:1.65}.family-invite-button{width:100%;margin:4px 0 10px}.family-profile-view{padding:8px 0}.family-profile-top{display:flex;align-items:center;gap:10px}.family-profile-top b{display:block;font-size:14px}.family-profile-top small{display:block;color:#9aa39a;font-size:10px;margin-top:4px}.family-profile-view>p{color:#788579;font-size:12px;line-height:1.7}.family-view-section{padding:12px 0;border-top:1px solid var(--line)}.family-view-section>b{display:block;font-size:11px;margin-bottom:8px}.family-view-section article{padding:8px 0;border-bottom:1px solid #f0f2ed}.family-view-section article small{display:block;color:#9aa39b;font-size:9px}.family-view-section article strong{display:block;font-size:11px;margin-top:5px}.family-view-section article p{font-size:10px;color:#7e8a80;line-height:1.6;margin:4px 0}
+    .map-pin.lost{border-color:#df776c;background:#fff0ed;color:#b94b43;box-shadow:0 6px 15px rgba(188,76,67,.2);font-size:17px}.map-pin.lost.selected{outline:3px solid #f2b0a8}.lost-detail-icon{font-size:38px;margin-bottom:6px}.lost-tag{background:#fff0eb;color:#b75b50}.lost-owner-card{display:flex;align-items:center;gap:9px;padding:10px;margin:13px 0;border-radius:11px;background:#fbf6f2}.lost-owner-card small{display:block;color:#9ca49a;font-size:9px}.lost-owner-card b{display:block;font-size:12px;margin-top:3px}.publish-lost-button{margin-left:auto!important;background:#2d6245!important;color:#fff!important;border-color:#2d6245!important}
+    @media(max-width:760px){.pet-switcher{align-items:flex-start;flex-direction:column;margin:-4px 0 18px;padding:11px}.pet-switcher-left{align-items:flex-start;flex-direction:column}.pet-switcher-pets{gap:6px}.pet-chip{padding:7px 10px}.family-account-chip{align-self:flex-end;margin-top:-40px}.health-reminder-list{grid-template-columns:1fr}.family-member-card{flex-wrap:wrap}}
+  `;
+  document.head.appendChild(style);
+
+  loadPet(household.currentPetId);
+  if(!people.some(person=>String(person.name).startsWith(memberNow().name)))people.push({emoji:memberNow().avatar||'👤',name:memberNow().name+' & '+activePet.name,pet:activePet.species+' · 家庭宠物',distance:1.1,type:'other',bio:memberNow().profile?.bio||'和家人一起照顾毛孩子。',city:memberNow().profile?.city||'上海 · 徐汇区'});
+  renderPetSwitcher();
+  renderHealthReminders();
+  if(document.querySelector('#map.active'))setTimeout(renderLostMap,0);
+})();
+</script>
+
 </body></html>
 
