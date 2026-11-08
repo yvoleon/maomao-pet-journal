@@ -253,6 +253,18 @@ localStorage.setItem('maomao-posts', JSON.stringify(posts));
 
 const growthStoryBaseRender = renderMore;
 renderMore = function () {
+  const missingIds = stories.some(story => !story.id);
+  if (missingIds) {
+    stories = stories.map((story, index) => ({ ...story, id: story.id || 'story-' + Date.now() + '-' + index }));
+    localStorage.setItem('maomao-stories', JSON.stringify(stories));
+  }
+  let linkedPost = false;
+  for (const story of stories) {
+    if (!story.public) continue;
+    const legacyPost = posts.find(post => !post.storyId && post.name === '小满' && post.kind === 'daily' && post.title === story.title && post.text === story.text);
+    if (legacyPost) { legacyPost.storyId = story.id; linkedPost = true; }
+  }
+  if (linkedPost) localStorage.setItem('maomao-posts', JSON.stringify(posts));
   growthStoryBaseRender();
   const sortedStories = [...stories].sort((a, b) => b.date.localeCompare(a.date));
   document.querySelector('#storyGrid')?.querySelectorAll('.story').forEach((card, index) => {
