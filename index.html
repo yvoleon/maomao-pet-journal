@@ -623,7 +623,7 @@ growthStoryForm.onsubmit = async function (event) {
   const mapFilters=document.querySelector('#mapFilters');
   if(mapFilters&&!mapFilters.querySelector('[data-map-filter="lost"]')){
     mapFilters.insertAdjacentHTML('beforeend','<button data-map-filter="lost">走失求助</button><button class="publish-lost-button" data-action="family-publish-lost">＋ 发布走失信息</button>');
-    mapFilters.addEventListener('click',event=>{if(event.target.closest('[data-map-filter]'))setTimeout(renderLostMap,0);},true);
+    window.addEventListener('click',event=>{if(event.target.closest('#mapFilters [data-map-filter]'))setTimeout(renderLostMap,0);},true);
   }
   document.addEventListener('click',event=>{
     const petButton=event.target.closest('[data-pet-switch]');
