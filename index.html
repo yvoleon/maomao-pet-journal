@@ -406,7 +406,9 @@ growthStoryForm.onsubmit = async function (event) {
   household.tasks = Array.isArray(household.tasks) ? household.tasks : [];
   household.lostPets = Array.isArray(household.lostPets) ? household.lostPets : [];
   if (!household.members.some(member => member.id === 'owner-1')) household.members.unshift({id:'owner-1',name:seedOwnerName,role:'家庭管理员',avatar:'👩🏻',profile:clone(savedProfile)});
-  if (!household.members.some(member => member.id === 'member-2')) household.members.push({id:'member-2',name:otherOwnerName,role:'家庭成员',avatar:'👤',accessStatus:'accepted',profile:{name:otherOwnerName,bio:'和家人一起照顾毛孩子，记录每个小进步。',city:'上海 · 徐汇区',isPublic:false}}); const secondMember=household.members.find(member=>member.id==='member-2'); if(secondMember){secondMember.name='大吉';secondMember.role='家庭成员';secondMember.accessStatus='accepted';secondMember.avatar=secondMember.avatar||'👤';secondMember.profile={...(secondMember.profile||{}),name:'大吉'};}
+  if (!household.members.some(member => member.id === 'member-2')) household.members.push({id:'member-2',name:otherOwnerName,role:'家庭成员',avatar:'👤',accessStatus:'accepted',profile:{name:otherOwnerName,bio:'和家人一起照顾毛孩子，记录每个小进步。',city:'上海 · 徐汇区',isPublic:false}});
+  const secondMember=household.members.find(member=>member.id==='member-2');
+  if(secondMember){secondMember.name='大吉';secondMember.role='家庭成员';secondMember.accessStatus='accepted';secondMember.avatar=secondMember.avatar||'👤';secondMember.profile={...(secondMember.profile||{}),name:'大吉'};}
   if (!household.pets.some(pet => pet.id === 'pet-tail')) household.pets.unshift(seedDog);
   if (!household.pets.some(pet => pet.id === 'pet-mimi')) household.pets.push({
     id:'pet-mimi',name:'咪咪',species:'猫',emoji:'🐈',sex:'女生',birthday:'2024-06-12',
@@ -416,7 +418,7 @@ growthStoryForm.onsubmit = async function (event) {
   household.pets.forEach(pet => { pet.records = Array.isArray(pet.records) ? pet.records : []; pet.stories = Array.isArray(pet.stories) ? pet.stories : []; });
   household.currentPetId = localStorage.getItem('maomao-active-pet-id') || household.currentPetId || 'pet-tail';
   if (!household.pets.some(pet => pet.id === household.currentPetId)) household.currentPetId = household.pets[0].id;
-  let activeMemberId = 'owner-1';
+  let activeMemberId = household.members.some(member=>member.id==='owner-1') ? 'owner-1' : (localStorage.getItem(memberKey) || household.activeMemberId || household.members[0].id);
   if (!household.members.some(member => member.id === activeMemberId)) activeMemberId = household.members[0].id;
   household.activeMemberId = activeMemberId;
   let activePet = household.pets.find(pet => pet.id === household.currentPetId);
@@ -483,7 +485,7 @@ growthStoryForm.onsubmit = async function (event) {
     let bar=document.querySelector('#petSwitcher');
     if(!bar){bar=document.createElement('div');bar.id='petSwitcher';bar.className='pet-switcher';document.querySelector('.top')?.insertAdjacentElement('afterend',bar);}
     const current=memberNow();
-    bar.innerHTML='<div class="pet-switcher-left"><span class="pet-switcher-label">当前宠物</span><div class="pet-switcher-pets">'+household.pets.map(pet=>'<button class="pet-chip '+(pet.id===activePet.id?'selected':'')+'" data-pet-switch="'+escapeHtml(pet.id)+'"><span>'+escapeHtml(petEmoji(pet))+'</span>'+escapeHtml(pet.name)+'</button>').join('')+'<button class="pet-chip add-pet" data-action="family-new-pet">＋ 添加宠物</button></div></div><button class="family-account-chip" data-action="family-accounts"><span class="family-avatar">'+escapeHtml(current.avatar||'👤')+'</span><span><b>'+escapeHtml(current.name)+'</b><small>我的账号 · 家庭成员</small></span><span class="family-chevron">⌄</span></button>';
+    bar.innerHTML='<div class="pet-switcher-left"><span class="pet-switcher-label">当前宠物</span><div class="pet-switcher-pets">'+household.pets.map(pet=>'<button class="pet-chip '+(pet.id===activePet.id?'selected':'')+'" data-pet-switch="'+escapeHtml(pet.id)+'"><span>'+escapeHtml(petEmoji(pet))+'</span>'+escapeHtml(pet.name)+'</button>').join('')+'<button class="pet-chip add-pet" data-action="family-new-pet">＋ 添加宠物</button></div></div><button class="family-account-chip" data-action="family-accounts" aria-label="家庭成员"><span class="family-avatar">'+escapeHtml(current.avatar||'👤')+'</span><span><b>'+escapeHtml(current.name)+'</b><small>我的账号 · 家庭成员</small></span><span class="family-chevron">⌄</span></button>';
   }
   function labelSharedTodos(){
     document.querySelectorAll('#todoGrid [data-todo]').forEach(button=>{
@@ -497,7 +499,7 @@ growthStoryForm.onsubmit = async function (event) {
     const homeSub=home?.querySelector('.row-head p');if(homeSub)homeSub.textContent='今天看看'+name+'的状态';
     const portrait=home?.querySelector('.pet-card .pet-portrait');if(portrait)portrait.textContent=petEmoji(activePet);
     const nameNode=home?.querySelector('.pet-name');if(nameNode)nameNode.innerHTML=escapeHtml(name)+' <span style="font-size:15px;color:#e4a76e">✦</span><button class="pet-edit" data-action="edit-pet">编辑</button>';
-    const meta=home?.querySelector('.pet-meta');if(meta)meta.textContent=activePet.species+' · '+(activePet.sex||'未填写')+' · '+(activePet.birthday||'生日待补充')+' 出生';
+    const meta=home?.querySelector('.pet-meta');if(meta)meta.textContent=[activePet.species,activePet.sex,activePet.birthday?(activePet.birthday+' 出生'):'生日待补充'].filter(Boolean).join(' · ');
     const ageTag=home?.querySelector('.pet-card .tag.orange');if(ageTag)ageTag.textContent=activePet.species==='猫'?'猫咪':'陪伴中';
     const chart=document.querySelector('#health .big-chart .card-title');if(chart&&chart.firstChild)chart.firstChild.textContent=name+'的体重曲线 ';
     const growth=document.querySelector('#growth .card h2');if(growth)growth.textContent=name+'与'+memberNow().name+'的成长日记';
@@ -544,14 +546,16 @@ growthStoryForm.onsubmit = async function (event) {
   }
   function familyAccountsHtml(){
     syncCurrentPet();
-    openPanel('family-accounts','家庭成员','<p class="family-modal-intro">每位主人使用自己的独立账号。家庭成员经授权查看主页与共享待办；这里不会切换或登录他人账号。</p><div class="family-members-list">'+household.members.map(member=>'<div class="family-member-card"><span class="family-avatar large">'+escapeHtml(member.avatar||'👤')+'</span><div class="family-member-info"><b>'+escapeHtml(member.name)+(member.id===activeMemberId?' · 当前账户':'')+'</b><small>'+escapeHtml(member.role||'家庭成员')+' · '+(member.id===activeMemberId?'当前账号':member.accessStatus==='pending'?'等待接受邀请':'已授权查看')</small></div><button class="text-btn" data-family-profile="'+escapeHtml(member.id)+'">访问主页</button>'+''+'</div>').join('')+'</div><div class="family-shared-card"><b>共享的家庭空间</b><p>'+household.pets.map(pet=>escapeHtml(petEmoji(pet))+' '+escapeHtml(pet.name)).join('　')+'</p><small>家庭待办共 '+household.tasks.filter(task=>!task.done).length+' 项未完成，所有成员打开同一家庭空间都能看到。</small></div><button class="outline family-invite-button" data-action="family-add-member">＋ 邀请家庭成员</button><small class="family-demo-note">交互原型：账户和共享数据保存在当前浏览器；跨设备同步及真实身份验证需要服务端支持。</small>',false);
+    openPanel('family-accounts','家庭成员','<p class="family-modal-intro">每位主人使用自己的独立账号。家庭成员可通过授权查看主页和共享照护内容；这里不会切换或登录他人账号。</p><div class="family-members-list">'+household.members.map(member=>'<div class="family-member-card"><span class="family-avatar large">'+escapeHtml(member.avatar||'👤')+'</span><div class="family-member-info"><b>'+escapeHtml(member.name)+(member.id===activeMemberId?' · 我的账号':'')+'</b><small>家庭成员 · '+(member.id===activeMemberId?'本人账号':member.accessStatus==='pending'?'等待接受邀请':'已授权查看')+'</small></div>'+(member.id===activeMemberId?'<button class="text-btn" data-family-profile="'+escapeHtml(member.id)+'">我的主页</button>':member.accessStatus==='pending'?'<span class="family-invite-status">等待接受</span>':'<button class="text-btn" data-family-profile="'+escapeHtml(member.id)+'">查看主页</button>')+'</div>').join('')+'</div><div class="family-shared-card"><b>共享照护</b><p>'+household.pets.map(pet=>escapeHtml(petEmoji(pet))+' '+escapeHtml(pet.name)).join('　')+'</p><small>'+household.tasks.filter(task=>!task.done).length+' 项待办由家庭成员共同查看和维护。成员仍使用各自账号。</small></div><button class="outline family-invite-button" data-action="family-add-member">＋ 邀请家庭成员</button><small class="family-demo-note">演示版数据保存在当前浏览器；真实邀请授权、独立登录与跨设备同步需要服务端支持。</small>',false);
   }
   function familyProfileView(memberId){
     syncCurrentPet();
-    const member=household.members.find(item=>item.id===memberId);if(!member)return;if(member.id!==activeMemberId&&member.accessStatus==='pending'){showToast('对方接受家庭邀请后才能查看主页');return;}
+    const member=household.members.find(item=>item.id===memberId);if(!member)return;
+    if(member.id!==activeMemberId&&member.accessStatus==='pending'){showToast('对方接受家庭邀请后才能查看主页');return;}
     const profile=member.id===activeMemberId?readJson('maomao-user-profile-v2',member.profile||{}):(member.profile||{});
     const memberPosts=posts.filter(post=>post.ownerId===member.id||post.name===member.name).slice(0,3);
-    openPanel('family-member-view',member.name+'的家庭主页','<div class="family-profile-view"><div class="family-profile-top"><span class="family-avatar large">'+escapeHtml(member.avatar||'👤')+'</span><div><b>'+escapeHtml(member.name)+'</b><small>'+escapeHtml(member.role||'家庭成员')+' · '+escapeHtml(profile.city||'地区待补充')+'</small></div></div><p>'+escapeHtml(profile.bio||'这位家人还没有填写个人介绍。')+'</p><div class="family-view-section"><b>共同照护的宠物</b><div>'+household.pets.map(pet=>'<span class="tag">'+escapeHtml(petEmoji(pet))+' '+escapeHtml(pet.name)+'</span>').join('')+'</div></div><div class="family-view-section"><b>最近分享</b>'+(memberPosts.length?memberPosts.map(post=>'<article><small>'+escapeHtml(post.date||'最近')+' · '+escapeHtml(post.pet||'家庭宠物')+'</small><strong>'+escapeHtml(post.title)+'</strong><p>'+escapeHtml(post.text)+'</p></article>').join(''):'<small>暂时没有家庭分享动态。</small>')+'</div></div><button class="outline" data-action="family-back-to-accounts">返回家庭成员</button>',false);
+    const sharedTasks=household.tasks.filter(task=>!task.done).slice(0,4);
+    openPanel('family-member-view',member.name+'的主页','<div class="family-profile-view"><div class="family-profile-top"><span class="family-avatar large">'+escapeHtml(member.avatar||'👤')+'</span><div><b>'+escapeHtml(member.name)+'</b><small>'+escapeHtml(member.role||'家庭成员')+' · '+escapeHtml(profile.city||'地区待补充')+'</small></div></div><p>'+escapeHtml(profile.bio||'这位家人还没有填写个人介绍。')+'</p><div class="family-access-note">通过家庭成员授权访问 · '+(member.id===activeMemberId?'本人账号':'只查看已授权内容')+'</div><div class="family-view-section"><b>共同照护的宠物</b><div>'+household.pets.map(pet=>'<span class="tag">'+escapeHtml(petEmoji(pet))+' '+escapeHtml(pet.name)+'</span>').join('')+'</div></div><div class="family-view-section"><b>家庭共享待办</b>'+(sharedTasks.length?sharedTasks.map(task=>'<article><small>'+escapeHtml(task.date||'待安排')+' · '+escapeHtml(household.pets.find(pet=>pet.id===task.petId)?.name||'家庭宠物')+'</small><strong>'+escapeHtml(task.title)+'</strong></article>').join(''):'<small>目前没有待办事项。</small>')+'</div><div class="family-view-section"><b>最近分享</b>'+(memberPosts.length?memberPosts.map(post=>'<article><small>'+escapeHtml(post.date||'最近')+' · '+escapeHtml(post.pet||'家庭宠物')+'</small><strong>'+escapeHtml(post.title)+'</strong><p>'+escapeHtml(post.text)+'</p></article>').join(''):'<small>暂时没有家庭分享动态。</small>')+'</div></div><button class="outline" data-action="family-back-to-accounts">返回家庭成员</button>',false);
   }
   const baseOpenModal=openModal;
   openModal=function(type){
@@ -560,7 +564,7 @@ growthStoryForm.onsubmit = async function (event) {
       openPanel('family-new-pet','添加家庭宠物','<label class="field">宠物名字<input name="newPetName" required maxlength="20" placeholder="例如：咪咪"></label><label class="field">宠物种类<input name="newPetSpecies" required maxlength="24" list="familyPetKinds" placeholder="可自定义种类"><datalist id="familyPetKinds"><option>猫</option><option>狗</option><option>兔子</option><option>仓鼠</option><option>鸟</option><option>乌龟</option></datalist></label><label class="field">生日（选填）<input name="newPetBirthday" type="date"></label><small class="family-demo-note">新宠物会加入家庭共享档案，可以从顶部标签切换。</small>',true);return;
     }
     if(type==='family-add-member'){
-      openPanel('family-add-member','邀请家庭成员','<label class="field">家庭成员昵称<input name="familyMemberName" required maxlength="20" placeholder="例如：大吉"></label><small class="family-demo-note">成员身份：家庭成员</small><label class="field">个人介绍<input name="familyMemberBio" maxlength="100" placeholder="简单介绍一下自己"></label><small class="family-demo-note">发送家庭成员邀请；对方使用自己的账号接受后即可查看授权主页和共享待办。这里不会创建或切换他人账号。</small>',true);return;
+      openPanel('family-add-member','邀请家庭成员','<label class="field">家庭成员昵称<input name="familyMemberName" required maxlength="20" placeholder="例如：大吉"></label><label class="field">邀请说明（选填）<input name="familyMemberBio" maxlength="100" placeholder="一起照顾小尾巴和咪咪"></label><small class="family-demo-note">邀请对方使用自己的账号接受授权后查看家庭主页和共享待办。这里不会创建、切换或登录对方账号。</small>',true);return;
     }
     if(type==='family-lost-pet'){
       openPanel('family-lost-pet','发布走失宠物信息','<label class="field">走失宠物<select name="lostPetId">'+household.pets.map(pet=>'<option value="'+escapeHtml(pet.id)+'" '+(pet.id===activePet.id?'selected':'')+'>'+escapeHtml(pet.name)+' · '+escapeHtml(pet.species)+'</option>').join('')+'</select></label><label class="field">走失地点<input name="lostArea" required maxlength="60" value="上海 · 徐汇区附近" placeholder="选择或描述附近地标"></label><label class="field">最后出现时间<input name="lostTime" required maxlength="32" value="今天"></label><label class="field">外观和联系方式<textarea name="lostDescription" required maxlength="220" placeholder="颜色、特征、项圈，以及希望邻居如何联系你"></textarea></label><small class="family-demo-note">地点会显示在附近地图。发布前请确认只填写愿意公开的区域和联系信息。</small>',true);return;
@@ -588,7 +592,7 @@ growthStoryForm.onsubmit = async function (event) {
     if(modalType==='family-add-member'){
       const name=String(data.get('familyMemberName')||'').trim();if(!name)return;
       const member={id:'member-'+Date.now(),name,role:'家庭成员',avatar:'👤',accessStatus:'pending',profile:{name,bio:String(data.get('familyMemberBio')||'').trim(),city:'上海 · 徐汇区',isPublic:false}};
-      household.members.push(member);saveHousehold();form.reset();familyAccountsHtml();showToast('邀请已记录，等待对方接受');return;
+      household.members.push(member);saveHousehold();form.reset();familyAccountsHtml();showToast('演示邀请已记录，等待对方接受');return;
     }
     const selected=household.pets.find(pet=>pet.id===String(data.get('lostPetId')));
     if(!selected)return;
@@ -632,8 +636,6 @@ growthStoryForm.onsubmit = async function (event) {
     if(lostPin){event.preventDefault();event.stopImmediatePropagation();const item=household.lostPets.find(value=>value.id===lostPin.dataset.lostPetPin);renderLostDetail(item);renderLostMap();return;}
     const memberProfile=event.target.closest('[data-family-profile]');
     if(memberProfile){event.preventDefault();event.stopImmediatePropagation();familyProfileView(memberProfile.dataset.familyProfile);return;}
-    const memberSwitch=null;
-    if(memberSwitch){event.preventDefault();event.stopImmediatePropagation();syncCurrentPet();const current=memberNow();const currentProfile=readJson('maomao-user-profile-v2',current.profile||{});current.profile={...(current.profile||{}),...currentProfile};current.name=current.profile.name||current.name;const target=household.members.find(item=>item.id===memberSwitch.dataset.familySwitch);if(!target)return;activeMemberId=target.id;household.activeMemberId=target.id;localStorage.setItem('maomao-user-profile-v2',JSON.stringify(target.profile||{name:target.name,bio:'',city:'上海 · 徐汇区',isPublic:false}));localStorage.setItem(memberKey,target.id);saveHousehold();location.reload();return;}
     const action=event.target.closest('[data-action]')?.dataset.action;
     if(action==='family-accounts'){event.preventDefault();event.stopImmediatePropagation();familyAccountsHtml();return;}
     if(action==='family-new-pet'){event.preventDefault();event.stopImmediatePropagation();openModal('family-new-pet');return;}
@@ -650,7 +652,7 @@ growthStoryForm.onsubmit = async function (event) {
     .pet-chip{border:1px solid #e8eee5;background:#fbfcfa;color:#667368;border-radius:99px;padding:7px 12px;font-size:12px;font-weight:700}.pet-chip span{margin-right:5px}.pet-chip.selected{background:#eaf4e8;color:var(--green);border-color:#d8ead6}.pet-chip.add-pet{border-style:dashed;color:#719174}
     .family-account-chip{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 6px;border:1px solid #e7ece4;border-radius:99px;background:#fff;color:#3d5f45;text-align:left;white-space:nowrap}.family-account-chip b{display:block;font-size:11px}.family-account-chip small{display:block;color:#9ba59b;font-size:9px;margin-top:2px}.family-avatar{width:30px;height:30px;border-radius:50%;background:#f1eee6;display:grid;place-items:center;font-size:17px}.family-avatar.large{width:43px;height:43px;font-size:22px;flex:0 0 43px}.family-chevron{font-size:14px;color:#9ca69c;margin-left:3px}
     .health-reminder-panel{padding:17px 20px;margin:0 0 17px}.health-reminder-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.health-reminder-head b{display:block;font-size:13px}.health-reminder-head small,.health-reminder-row small{display:block;color:#9aa49b;font-size:10px;margin-top:4px}.health-reminder-head .outline{padding:8px 11px;font-size:11px}.health-reminder-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:13px}.health-reminder-row{display:flex;align-items:center;gap:9px;padding:10px;background:#f8faf6;border-radius:11px}.health-reminder-row>div{min-width:0;flex:1}.health-reminder-row b{font-size:11px}.reminder-icon{font-size:17px}.health-reminder-empty{padding:12px 0 1px;color:#9aa49b;font-size:11px}.family-shared-note{padding:10px;border-radius:9px;background:#f0f6ed;color:#5e815f;font-size:11px;line-height:1.6}
-    .family-modal-intro{font-size:12px;color:#7d897e;line-height:1.7;margin:12px 0}.family-members-list{display:grid;gap:8px}.family-member-card{display:flex;align-items:center;gap:9px;padding:10px;background:#f8faf6;border-radius:12px}.family-member-info{min-width:75px;flex:1}.family-member-info b{font-size:11px}.family-member-info small{display:block;color:#96a096;font-size:9px;margin-top:4px}.family-member-card .text-btn{font-size:10px;white-space:nowrap}.family-member-card .outline{padding:7px 9px;font-size:10px}.family-shared-card{margin:13px 0;padding:13px;border-radius:12px;background:#eff6eb}.family-shared-card b{font-size:12px}.family-shared-card p{font-size:14px;margin:8px 0}.family-shared-card small,.family-demo-note{display:block;color:#849184;font-size:9px;line-height:1.65}.family-invite-button{width:100%;margin:4px 0 10px}.family-profile-view{padding:8px 0}.family-profile-top{display:flex;align-items:center;gap:10px}.family-profile-top b{display:block;font-size:14px}.family-profile-top small{display:block;color:#9aa39a;font-size:10px;margin-top:4px}.family-profile-view>p{color:#788579;font-size:12px;line-height:1.7}.family-view-section{padding:12px 0;border-top:1px solid var(--line)}.family-view-section>b{display:block;font-size:11px;margin-bottom:8px}.family-view-section article{padding:8px 0;border-bottom:1px solid #f0f2ed}.family-view-section article small{display:block;color:#9aa39b;font-size:9px}.family-view-section article strong{display:block;font-size:11px;margin-top:5px}.family-view-section article p{font-size:10px;color:#7e8a80;line-height:1.6;margin:4px 0}
+    .family-modal-intro{font-size:12px;color:#7d897e;line-height:1.7;margin:12px 0}.family-members-list{display:grid;gap:8px}.family-member-card{display:flex;align-items:center;gap:9px;padding:10px;background:#f8faf6;border-radius:12px}.family-member-info{min-width:75px;flex:1}.family-member-info b{font-size:11px}.family-member-info small{display:block;color:#96a096;font-size:9px;margin-top:4px}.family-member-card .text-btn{font-size:10px;white-space:nowrap}.family-member-card .outline{padding:7px 9px;font-size:10px}.family-invite-status{color:#9b8b67;font-size:10px;white-space:nowrap}.family-shared-card{margin:13px 0;padding:13px;border-radius:12px;background:#eff6eb}.family-shared-card b{font-size:12px}.family-shared-card p{font-size:14px;margin:8px 0}.family-shared-card small,.family-demo-note{display:block;color:#849184;font-size:9px;line-height:1.65}.family-invite-button{width:100%;margin:4px 0 10px}.family-profile-view{padding:8px 0}.family-profile-top{display:flex;align-items:center;gap:10px}.family-profile-top b{display:block;font-size:14px}.family-profile-top small{display:block;color:#9aa39a;font-size:10px;margin-top:4px}.family-profile-view>p{color:#788579;font-size:12px;line-height:1.7}.family-access-note{margin:9px 0;padding:8px 10px;background:#f0f6ed;border-radius:9px;color:#668267;font-size:10px}.family-view-section{padding:12px 0;border-top:1px solid var(--line)}.family-view-section>b{display:block;font-size:11px;margin-bottom:8px}.family-view-section article{padding:8px 0;border-bottom:1px solid #f0f2ed}.family-view-section article small{display:block;color:#9aa39b;font-size:9px}.family-view-section article strong{display:block;font-size:11px;margin-top:5px}.family-view-section article p{font-size:10px;color:#7e8a80;line-height:1.6;margin:4px 0}
     .map-pin.lost{border-color:#df776c;background:#fff0ed;color:#b94b43;box-shadow:0 6px 15px rgba(188,76,67,.2);font-size:17px}.map-pin.lost.selected{outline:3px solid #f2b0a8}.lost-detail-icon{font-size:38px;margin-bottom:6px}.lost-tag{background:#fff0eb;color:#b75b50}.lost-owner-card{display:flex;align-items:center;gap:9px;padding:10px;margin:13px 0;border-radius:11px;background:#fbf6f2}.lost-owner-card small{display:block;color:#9ca49a;font-size:9px}.lost-owner-card b{display:block;font-size:12px;margin-top:3px}.publish-lost-button{margin-left:auto!important;background:#2d6245!important;color:#fff!important;border-color:#2d6245!important}
     @media(max-width:760px){.pet-switcher{align-items:flex-start;flex-direction:column;margin:-4px 0 18px;padding:11px}.pet-switcher-left{align-items:flex-start;flex-direction:column}.pet-switcher-pets{gap:6px}.pet-chip{padding:7px 10px}.family-account-chip{align-self:flex-end;margin-top:-40px}.health-reminder-list{grid-template-columns:1fr}.family-member-card{flex-wrap:wrap}}
   `;
@@ -661,6 +663,124 @@ growthStoryForm.onsubmit = async function (event) {
   renderPetSwitcher();
   renderHealthReminders();
   if(document.querySelector('#map.active'))setTimeout(renderLostMap,0);
+})();
+</script>
+
+<script id="friends-directory-v1">
+(() => {
+  const section = document.querySelector('#nearby');
+  if (!section) return;
+  const navButtons = document.querySelectorAll('[data-page="nearby"]');
+  navButtons.forEach(button => {
+    const label = [...button.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+    if (label) label.textContent = '宠友';
+  });
+  section.innerHTML = '<div class="page-head"><div><h1>宠友 ✦</h1><p>认识附近的宠友，也和家人一起照顾毛孩子。</p></div><span class="city-chip">⌖ 上海 · 徐汇区</span></div>'+
+    '<div class="friend-groups">'+
+      '<section class="card friend-group"><div class="friend-group-head"><div><h2>已添加的宠友</h2><small>聊聊近况，一起分享养宠日常</small></div><span class="friend-count" id="friendCount">0 位</span></div><div id="friendRequests"></div><div id="friendList"></div><div id="friendOutgoing"></div></section>'+
+      '<section class="card friend-group"><div class="friend-group-head"><div><h2>家庭成员</h2><small>共同查看宠物信息与家庭待办</small></div><span class="friend-count" id="familyCount">0 位</span></div><div id="familyFriendList"></div><button class="outline friend-manage-family" data-action="family-accounts">管理家庭成员</button></section>'+
+    '</div>'+
+    '<section class="friend-recommendations"><div class="row-head"><div><h2>附近可以认识的宠友</h2><p>发送申请，对方同意后就会建立宠友关系。</p></div><span class="demo-label">附近推荐 · 演示</span></div><div class="tabbar"><button class="on" data-distance="all">全部</button><button data-distance="near">3 km 内</button><button data-distance="dog">狗狗家长</button><button data-distance="cat">猫咪家长</button><button data-distance="other">其他宠物</button></div><div class="friend-recommend-grid" id="nearbyGrid"></div><small class="friend-demo-note">好友申请和关系状态保存在当前浏览器；真实跨账号通知与同步需要服务端支持。</small></section>';
+
+  const style = document.createElement('style');
+  style.id = 'friends-directory-style';
+  style.textContent = '.friend-groups{display:grid;grid-template-columns:1.12fr .88fr;gap:17px;margin:20px 0 30px}.friend-group{padding:20px;min-width:0}.friend-group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}.friend-group-head h2{font-size:15px;margin:0}.friend-group-head small{display:block;color:#929d92;font-size:10px;margin-top:5px}.friend-count{border-radius:99px;padding:6px 10px;background:#eff6ed;color:#5c825e;font-size:10px;white-space:nowrap}.friend-row{display:flex;align-items:center;gap:11px;padding:12px 0;border-top:1px solid #f0f2ed;min-width:0}.friend-avatar{width:42px;height:42px;flex:0 0 42px;border-radius:14px;background:#f1f5ec;display:grid;place-items:center;font-size:23px}.friend-copy{flex:1;min-width:0}.friend-copy>b{font-size:12px}.friend-copy small{display:block;color:#94a094;font-size:10px;line-height:1.6;margin-top:4px}.friend-copy .profile-link{font-size:12px}.friend-actions{display:flex;gap:6px;align-items:center;flex-shrink:0}.friend-actions button{font-size:10px;padding:7px 9px}.friend-status{color:#8f9a8f;font-size:10px;white-space:nowrap}.friend-subhead{padding:9px 0 2px;color:#839084;font-size:10px;font-weight:800}.friend-empty{padding:16px 0;color:#a0a99f;font-size:11px;line-height:1.7}.friend-manage-family{width:100%;margin-top:12px;padding:8px;font-size:11px}.friend-recommendations{margin:28px 0 0}.friend-recommend-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.friend-rec-card{padding:16px;min-width:0}.friend-rec-top{display:flex;align-items:center;gap:10px}.friend-rec-top .friend-avatar{width:45px;height:45px;flex-basis:45px}.friend-rec-top b{font-size:12px}.friend-rec-top small{display:block;color:#99a298;font-size:10px;margin-top:4px}.friend-rec-card p{min-height:38px;color:#79867a;font-size:11px;line-height:1.7;margin:11px 0}.friend-rec-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px}.friend-rec-bottom small{color:#9ba49a;font-size:10px}.friend-rec-bottom button{font-size:10px;padding:8px 10px}.friend-rec-bottom button:disabled{background:#f1f4ef;color:#8f9a90;border-color:#e8ece5;cursor:default}.friend-demo-note{display:block;color:#a0a99f;font-size:9px;line-height:1.6;margin-top:12px}.friend-incoming{margin-bottom:8px;padding:10px 12px;border-radius:12px;background:#fff7eb}.friend-outgoing{margin-top:8px;padding:10px 12px;border-radius:12px;background:#f5f7f2}.friend-incoming .friend-row,.friend-outgoing .friend-row{border:0;padding:5px 0}.friend-request-label{color:#b57c4f;font-size:10px;font-weight:700;margin-bottom:4px}.friend-family-role{color:#709172;font-size:9px}.friend-groups .profile-link{text-decoration:none}.friend-groups .profile-link:hover{text-decoration:underline}@media(max-width:900px){.friend-groups{grid-template-columns:1fr}.friend-recommend-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.friend-recommend-grid{grid-template-columns:1fr}.friend-row{align-items:flex-start}.friend-actions{flex-direction:column;align-items:stretch}.friend-rec-card{padding:14px}}';
+  document.head.appendChild(style);
+
+  const escapeFriend = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const readFriendJson = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
+  const familyData = readFriendJson('maomao-family-household-v1', {});
+  const familyMembers = Array.isArray(familyData.members) ? familyData.members : [];
+  const ownerProfile = readFriendJson('maomao-user-profile-v2', {});
+  const currentMember = familyMembers.find(member => member.id === (familyData.activeMemberId || 'owner-1')) || familyMembers.find(member => member.id === 'owner-1');
+  const familyOtherMembers = familyMembers.filter(member => member.id !== currentMember?.id);
+  const currentName = currentMember?.name || ownerProfile.name || '小满';
+  const personOwnerName = person => String(person?.name || '').split(/[&·]/)[0].trim();
+  const personKey = person => 'petpal:' + personOwnerName(person);
+  const personByKey = key => (Array.isArray(people) ? people.find(person => personKey(person) === key) : null);
+  const familyNames = new Set(familyMembers.map(member => String(member.name || '').trim()));
+  const isOwnOrFamily = person => {
+    const name = personOwnerName(person);
+    return name === currentName || familyNames.has(name);
+  };
+  const friendStoreKey = 'maomao-friends-v1';
+  let friendState = readFriendJson(friendStoreKey, null);
+  if (!friendState || !Array.isArray(friendState.accepted)) {
+    const candidates = (Array.isArray(people) ? people : []).filter(person => !isOwnOrFamily(person));
+    friendState = {accepted:candidates[0] ? [personKey(candidates[0])] : [], incoming:candidates[1] ? [personKey(candidates[1])] : [], outgoing:[]};
+    localStorage.setItem(friendStoreKey, JSON.stringify(friendState));
+  }
+  friendState.accepted = Array.isArray(friendState.accepted) ? friendState.accepted : [];
+  friendState.incoming = Array.isArray(friendState.incoming) ? friendState.incoming : [];
+  friendState.outgoing = Array.isArray(friendState.outgoing) ? friendState.outgoing : [];
+  const saveFriendState = () => localStorage.setItem(friendStoreKey, JSON.stringify(friendState));
+  const profileLink = person => '<button class="profile-link" data-profile="'+escapeFriend(personOwnerName(person))+'">'+escapeFriend(personOwnerName(person))+'</button>';
+  const personRow = (person, status, actionHtml) => '<div class="friend-row"><span class="friend-avatar">'+escapeFriend(person.emoji || '🐾')+'</span><div class="friend-copy"><b>'+profileLink(person)+'</b><small>'+escapeFriend(person.pet || '宠物伙伴')+' · '+escapeFriend(person.city || '上海 · 徐汇区')+'</small></div><div class="friend-actions">'+(actionHtml || '<span class="friend-status">'+escapeFriend(status || '')+'</span>')+'</div></div>';
+
+  function renderFriendCenter() {
+    const accepted = friendState.accepted.map(personByKey).filter(Boolean);
+    const incoming = friendState.incoming.map(personByKey).filter(Boolean);
+    const outgoing = friendState.outgoing.map(personByKey).filter(Boolean);
+    const count = document.querySelector('#friendCount');
+    if (count) count.textContent = accepted.length+' 位';
+    const requests = document.querySelector('#friendRequests');
+    if (requests) requests.innerHTML = incoming.length ? '<div class="friend-incoming"><div class="friend-request-label">待你同意 · 同意后双方成为宠友</div>'+incoming.map(person => personRow(person, '', '<button class="outline" data-friend-action="decline" data-person-key="'+escapeFriend(personKey(person))+'">暂不接受</button><button class="primary" data-friend-action="accept" data-person-key="'+escapeFriend(personKey(person))+'">同意添加</button>')).join('')+'</div>' : '';
+    const friends = document.querySelector('#friendList');
+    if (friends) friends.innerHTML = accepted.length ? accepted.map(person => personRow(person, '已添加', '<button class="outline" data-action="message-user" data-name="'+escapeFriend(personOwnerName(person))+'">私信</button>')).join('') : '<div class="friend-empty">还没有已添加的宠友。可以在下方推荐里认识新朋友。</div>';
+    const sent = document.querySelector('#friendOutgoing');
+    if (sent) sent.innerHTML = outgoing.length ? '<div class="friend-outgoing"><div class="friend-subhead">等待对方同意</div>'+outgoing.map(person => personRow(person, '等待对方同意', '')).join('')+'</div>' : '';
+
+    const familyRoot = document.querySelector('#familyFriendList');
+    const familyCount = document.querySelector('#familyCount');
+    if (familyCount) familyCount.textContent = familyOtherMembers.length+' 位';
+    if (familyRoot) familyRoot.innerHTML = familyOtherMembers.length ? familyOtherMembers.map(member => {
+      const pets = Array.isArray(familyData.pets) ? familyData.pets.map(pet => pet.name).filter(Boolean).join('、') : '';
+      const current = member.id === (familyData.activeMemberId || 'owner-1');
+      const button = current ? '<button class="outline" data-profile="me">我的主页</button>' : member.accessStatus === 'pending' ? '<span class="friend-status">等待接受邀请</span>' : '<button class="outline" data-family-profile="'+escapeFriend(member.id)+'">查看主页</button>';
+      return '<div class="friend-row"><span class="friend-avatar">'+escapeFriend(member.avatar || '👤')+'</span><div class="friend-copy"><b>'+escapeFriend(member.name || '家庭成员')+'</b><small>'+escapeFriend(member.role || '家庭成员')+(current?' · 当前账号':'')+'<br>'+escapeFriend(pets || '共同照护宠物')+'</small></div><div class="friend-actions">'+button+'</div></div>';
+    }).join('') : '<div class="friend-empty">还没有家庭成员。可以通过“管理家庭成员”发送邀请。</div>';
+
+    const recommendations = document.querySelector('#nearbyGrid');
+    if (!recommendations) return;
+    const hidden = new Set([...friendState.accepted, ...friendState.incoming, ...friendState.outgoing]);
+    const visiblePeople = (Array.isArray(people) ? people : []).filter(person => {
+      if (isOwnOrFamily(person) || hidden.has(personKey(person))) return false;
+      if (distance === 'near' && Number(person.distance) > 3) return false;
+      if (distance === 'dog' || distance === 'cat' || distance === 'other') return person.type === distance;
+      return true;
+    });
+    recommendations.innerHTML = visiblePeople.map(person => {
+      const key = personKey(person), pending = friendState.outgoing.includes(key);
+      return '<article class="card friend-rec-card"><div class="friend-rec-top"><span class="friend-avatar">'+escapeFriend(person.emoji || '🐾')+'</span><div><b>'+profileLink(person)+'</b><small>'+escapeFriend(person.pet || '宠物伙伴')+'</small></div></div><p>'+escapeFriend(person.bio || '也在附近记录着和宠物一起生活的日常。')+'</p><div class="friend-rec-bottom"><small>⌖ '+escapeFriend(person.distance || '附近')+' km · '+escapeFriend(person.city || '徐汇区')+'</small><button class="outline" data-friend-action="request" data-person-key="'+escapeFriend(key)+'" '+(pending?'disabled':'')+'>'+(pending?'等待对方同意':'申请添加')+'</button></div></article>';
+    }).join('') || '<div class="card empty">暂时没有新的附近推荐，换个筛选看看吧。</div>';
+    document.querySelectorAll('#nearby [data-distance]').forEach(button => button.classList.toggle('on', button.dataset.distance === (distance || 'all')));
+  }
+
+  const previousRenderMore = renderMore;
+  renderMore = function () { previousRenderMore(); renderFriendCenter(); };
+  const previousPage = page;
+  page = function (id) { previousPage(id); if (id === 'nearby') { const crumb = document.querySelector('#breadcrumb'); if (crumb) crumb.textContent = '宠友'; renderFriendCenter(); } };
+  document.addEventListener('click', event => {
+    const button = event.target.closest('[data-friend-action]');
+    if (!button) return;
+    event.preventDefault(); event.stopImmediatePropagation();
+    const key = button.dataset.personKey, person = personByKey(key);
+    if (!person) return;
+    if (button.dataset.friendAction === 'request') {
+      if (!friendState.outgoing.includes(key) && !friendState.accepted.includes(key)) friendState.outgoing.push(key);
+      saveFriendState(); renderFriendCenter(); showToast('宠友申请已发送，等待对方同意');
+    } else if (button.dataset.friendAction === 'accept') {
+      friendState.incoming = friendState.incoming.filter(item => item !== key);
+      if (!friendState.accepted.includes(key)) friendState.accepted.push(key);
+      saveFriendState(); renderFriendCenter(); showToast('已同意，双方现在是宠友 ✨');
+    } else if (button.dataset.friendAction === 'decline') {
+      friendState.incoming = friendState.incoming.filter(item => item !== key);
+      saveFriendState(); renderFriendCenter(); showToast('已暂不接受这条申请');
+    }
+  }, true);
+  const previousBreadcrumb = document.querySelector('#breadcrumb');
+  if (previousBreadcrumb && document.querySelector('#nearby.active')) previousBreadcrumb.textContent = '宠友';
+  renderFriendCenter();
 })();
 </script>
 
