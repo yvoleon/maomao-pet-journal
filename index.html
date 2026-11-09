@@ -502,6 +502,7 @@ growthStoryForm.onsubmit = async function (event) {
     const meta=home?.querySelector('.pet-meta');if(meta)meta.textContent=[activePet.species,activePet.sex,activePet.birthday?(activePet.birthday+' 出生'):'生日待补充'].filter(Boolean).join(' · ');
     const ageTag=home?.querySelector('.pet-card .tag.orange');if(ageTag)ageTag.textContent=activePet.species==='猫'?'猫咪':'陪伴中';
     const chart=document.querySelector('#health .big-chart .card-title');if(chart&&chart.firstChild)chart.firstChild.textContent=name+'的体重曲线 ';
+    const careTitle=document.querySelector('#health .side-panel h3');if(careTitle)careTitle.textContent='下一步，照顾好'+name;
     const growth=document.querySelector('#growth .card h2');if(growth)growth.textContent=name+'与'+memberNow().name+'的成长日记';
     const profilePet=document.querySelector('#profileContent .pet-profile-card .pet-portrait');if(profilePet)profilePet.textContent=petEmoji(activePet);
   }
