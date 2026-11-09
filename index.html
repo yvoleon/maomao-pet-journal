@@ -784,5 +784,52 @@ growthStoryForm.onsubmit = async function (event) {
 })();
 </script>
 
-</body></html>
+<script id="community-inside-friends-v1">
+(() => {
+  const friends = document.querySelector('#nearby');
+  const community = document.querySelector('#community');
+  if (!friends || !community) return;
+  const head = friends.querySelector('.page-head');
+  if (!head || document.querySelector('#friendCommunityView')) return;
+  const tabs = document.createElement('div');
+  tabs.className = 'friend-area-tabs';
+  tabs.innerHTML = '<button class="on" type="button" data-friend-view="connections">宠友与家庭</button><button type="button" data-friend-view="community">社区动态与用品共享</button>';
+  const connections = document.createElement('div');
+  connections.id = 'friendConnectionsView';
+  let next = head.nextSibling;
+  while (next) { const current = next; next = next.nextSibling; connections.appendChild(current); }
+  const communityView = document.createElement('div');
+  communityView.id = 'friendCommunityView';
+  communityView.hidden = true;
+  community.classList.remove('section', 'active');
+  community.classList.add('friend-community-embedded');
+  communityView.appendChild(community);
+  head.after(tabs, connections, communityView);
+  const style = document.createElement('style');
+  style.id = 'community-inside-friends-style';
+  style.textContent = '.friend-area-tabs{display:flex;gap:8px;margin:-8px 0 20px}.friend-area-tabs button{border:1px solid var(--line);background:#fff;color:#768276;border-radius:99px;padding:9px 15px;font-size:12px;font-weight:700}.friend-area-tabs button.on{background:#e7f2e5;color:var(--green);border-color:#e7f2e5}.friend-community-embedded{display:block}.friend-community-embedded>.page-head{margin-top:4px}.nav button[data-page="community"],.mobile-nav button[data-page="community"]{display:none!important}@media(max-width:560px){.friend-area-tabs{flex-wrap:wrap}.friend-area-tabs button{flex:1;padding:9px 10px}}';
+  document.head.appendChild(style);
+  function showFriendView(view) {
+    const communityOn = view === 'community';
+    document.querySelector('#friendConnectionsView').hidden = communityOn;
+    communityView.hidden = !communityOn;
+    tabs.querySelectorAll('[data-friend-view]').forEach(button => button.classList.toggle('on', button.dataset.friendView === view));
+    const crumb = document.querySelector('#breadcrumb');
+    if (crumb) crumb.textContent = communityOn ? '宠友 · 社区动态' : '宠友';
+    if (communityOn && typeof renderMore === 'function') renderMore();
+  }
+  const oldPage = page;
+  page = function (id) {
+    if (id === 'community') { oldPage('nearby'); showFriendView('community'); return; }
+    oldPage(id);
+    if (id === 'nearby') showFriendView('connections');
+  };
+  document.addEventListener('click', event => {
+    const tab = event.target.closest('[data-friend-view]');
+    if (!tab) return;
+    event.preventDefault(); event.stopImmediatePropagation();
+    showFriendView(tab.dataset.friendView);
+  }, true);
+})();
+</script></body></html>
 
