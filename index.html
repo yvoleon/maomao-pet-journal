@@ -237,47 +237,6 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-todo]');if
   // Seed a lightweight sample conversation so the messaging interface is easy to discover.
   if(!Object.keys(conversations).length){conversations['阿梨']=[{from:'阿梨',text:'周末想带奶茶去滨江走走，你们有空吗？',time:'昨天'}];saveFeature(messageKey,conversations)}
   renderMore();renderProfile();renderMessages();renderMap();renderShop();
-
-  // The profile page is a household overview: list every pet and hide the global active-pet switcher there.
-  const baseProfileForHousehold = renderProfile;
-  renderProfile = function(){
-    baseProfileForHousehold();
-    const switcher=document.querySelector('#petSwitcher');
-    if(switcher)switcher.hidden=!!document.querySelector('#profile.active');
-    if(viewedProfile!=='me')return;
-    const description=document.querySelector('#profile .page-head p');
-    if(description)description.textContent='记录我和家里每只毛孩子的日常，也由我决定哪些内容可以被看见。';
-    const root=document.querySelector('#profileContent');
-    const petHeading=[...(root?.querySelectorAll('.profile-columns > div .row-head')||[])].find(row=>row.querySelector('h2')?.textContent.trim()==='我的宠物');
-    if(!petHeading)return;
-    petHeading.querySelector('[data-action="edit-pet"]')?.remove();
-    const currentCard=petHeading.nextElementSibling;
-    if(!currentCard?.classList.contains('pet-profile-card'))return;
-    let household={};
-    try{household=JSON.parse(localStorage.getItem('maomao-family-household-v1')||'{}')||{}}catch{}
-    const pets=Array.isArray(household.pets)&&household.pets.length?household.pets:[{...petProfile,emoji:'🐾',records,stories}];
-    const cards=pets.map(pet=>{
-      const species=pet.species||'宠物伙伴',emoji=pet.emoji||(species==='猫'?'🐈':species==='狗'?'🐕':'🐾');
-      const health=Array.isArray(pet.records)?pet.records:[],growth=Array.isArray(pet.stories)?pet.stories:[];
-      const latestWeight=health.filter(item=>item.type==='weight').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))[0];
-      const meta=[pet.sex,pet.birthday?'生日 '+pet.birthday:''].filter(Boolean).join(' · ')||'家庭共同照护';
-      return `<article class="card pet-profile-card profile-pet-card"><div class="pet-portrait">${escText(emoji)}</div><div class="profile-pet-copy"><b>${escText(pet.name||'宠物伙伴')} · ${escText(species)}</b><p>${escText(meta)}</p><div class="profile-pet-badges"><span class="tag">健康档案 ${health.length} 条</span><span class="tag">成长时光 ${growth.length} 条</span>${latestWeight?`<span class="tag">最近体重 ${escText(latestWeight.value||'已记录')}</span>`:''}</div></div></article>`;
-    }).join('');
-    currentCard.outerHTML=`<div class="profile-pets-grid">${cards}</div>`;
-  };
-  const pageBeforeProfileSwitcher = page;
-  page = function(id){pageBeforeProfileSwitcher(id);const switcher=document.querySelector('#petSwitcher');if(switcher)switcher.hidden=id==='profile';};
-  const profileAndMapStyle=document.createElement('style');
-  profileAndMapStyle.textContent='#petSwitcher[hidden]{display:none!important}.profile-pets-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:24px}.profile-pet-card{min-width:0}.profile-pet-copy{min-width:0;flex:1}.profile-pet-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.profile-pet-badges .tag{font-size:9px}.map-pin.me-location{background:#e9f1ff;border-color:#fff;outline:3px solid #a9c8ff;box-shadow:0 5px 16px #496b9b44}.map-pin.me-location.selected{outline:4px solid #82a8eb}.my-location-label{position:absolute;z-index:3;left:31%;top:55%;transform:translate(0,-50%);padding:5px 8px;border-radius:7px;background:#fff;color:#496b9b;font-size:10px;font-weight:800;box-shadow:0 3px 12px #40533320;white-space:nowrap}@media(max-width:640px){.profile-pets-grid{grid-template-columns:1fr}}';
-  document.head.appendChild(profileAndMapStyle);
-  const baseMapWithPlaces = renderMap;
-  renderMap = function(){
-    baseMapWithPlaces();
-    const map=document.querySelector('#demoMap'),detail=document.querySelector('#mapDetail');
-    if(!map||!detail)return;
-    map.insertAdjacentHTML('beforeend','<button type="button" class="map-pin me-location '+(selectedPlace==='my-location'?'selected':'')+'" style="left:28%;top:55%" data-map-select="my-location" aria-label="我的位置（演示）">📍</button><span class="my-location-label">我的位置</span>');
-    if(selectedPlace==='my-location')detail.innerHTML='<div class="place-icon">📍</div><span class="place-tag">当前位置 · 演示</span><h2>我的位置</h2><p class="place-address">⌖ 徐汇区 · 当前示意点</p><p class="place-description">地图上已标出你在附近区域的示意位置，可用来对照宠物友好空间、遛宠地点与宠物服务。</p><small class="muted-note">这是原型演示位置，不会读取设备 GPS，也不代表你的真实位置。</small>';
-  };
 })();
 
 </script>
@@ -831,6 +790,7 @@ growthStoryForm.onsubmit = async function (event) {
   const friends = document.querySelector('#nearby');
   const community = document.querySelector('#community');
   if (!friends || !community) return;
+
   const head = friends.querySelector('.page-head');
   if (!head || document.querySelector('#friendCommunityView')) return;
   const tabs = document.createElement('div');
@@ -839,7 +799,11 @@ growthStoryForm.onsubmit = async function (event) {
   const connections = document.createElement('div');
   connections.id = 'friendConnectionsView';
   let next = head.nextSibling;
-  while (next) { const current = next; next = next.nextSibling; connections.appendChild(current); }
+  while (next) {
+    const current = next;
+    next = next.nextSibling;
+    connections.appendChild(current);
+  }
   const communityView = document.createElement('div');
   communityView.id = 'friendCommunityView';
   communityView.hidden = true;
@@ -847,10 +811,12 @@ growthStoryForm.onsubmit = async function (event) {
   community.classList.add('friend-community-embedded');
   communityView.appendChild(community);
   head.after(tabs, connections, communityView);
+
   const style = document.createElement('style');
   style.id = 'community-inside-friends-style';
   style.textContent = '.friend-area-tabs{display:flex;gap:8px;margin:-8px 0 20px}.friend-area-tabs button{border:1px solid var(--line);background:#fff;color:#768276;border-radius:99px;padding:9px 15px;font-size:12px;font-weight:700}.friend-area-tabs button.on{background:#e7f2e5;color:var(--green);border-color:#e7f2e5}.friend-community-embedded{display:block}.friend-community-embedded>.page-head{margin-top:4px}.nav button[data-page="community"],.mobile-nav button[data-page="community"]{display:none!important}@media(max-width:560px){.friend-area-tabs{flex-wrap:wrap}.friend-area-tabs button{flex:1;padding:9px 10px}}';
   document.head.appendChild(style);
+
   function showFriendView(view) {
     const communityOn = view === 'community';
     document.querySelector('#friendConnectionsView').hidden = communityOn;
@@ -860,18 +826,27 @@ growthStoryForm.onsubmit = async function (event) {
     if (crumb) crumb.textContent = communityOn ? '宠友 · 社区动态' : '宠友';
     if (communityOn && typeof renderMore === 'function') renderMore();
   }
+
   const oldPage = page;
   page = function (id) {
-    if (id === 'community') { oldPage('nearby'); showFriendView('community'); return; }
+    if (id === 'community') {
+      oldPage('nearby');
+      showFriendView('community');
+      return;
+    }
     oldPage(id);
     if (id === 'nearby') showFriendView('connections');
   };
+
   document.addEventListener('click', event => {
     const tab = event.target.closest('[data-friend-view]');
     if (!tab) return;
-    event.preventDefault(); event.stopImmediatePropagation();
+    event.preventDefault();
+    event.stopImmediatePropagation();
     showFriendView(tab.dataset.friendView);
   }, true);
 })();
-</script></body></html>
+</script>
+
+</body></html>
 
